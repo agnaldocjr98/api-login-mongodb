@@ -37,7 +37,7 @@
       "express": "^4.17.1",
       "jsonwebtoken": "^8.5.1",
       "module-alias": "^2.2.2",
-      "moment": "^2.29.1",
+      "moment": "^2.29.3",
       "mongodb": "^4.7.0",
       "node-gyp": "^8.1.0",
       "prettier": "^2.5.1"
@@ -46,7 +46,7 @@
       "dev": "ts-node-dev -r tsconfig-paths/register --respawn --inspect --transpile-only --ignore-watch node_modules --no-notify ./src/main/server.ts",
       "build": "tsc -p .",
       "clean": "tsc --build --clean",
-      "start": "npm run build && node ./build/index.js",
+      "start": "npm run build && node ./build/src/main/server.js",
       "gitcommit": "set NODE_ENV=GITCOMMIT && npm run build && node ./build/index.js && set NODE_ENV=DEVELOPMENT",
       "up-dev": "git pull origin develop && yarn build && pm2 restart \"api-edmil\"",
       "up-prod": "git pull -f origin master && yarn build && pm2 restart \"api-edmil\"",

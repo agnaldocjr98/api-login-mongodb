@@ -24,7 +24,7 @@ export class AccomplishLoginPortalController implements Controller {
       try {
          const response = await this.accomplishloginportal.accomplish(body);
          if (response.isAuthenticated) return ok(response);
-         if (response.errorMessage?.includes('Inválidas')) {
+         if (response.errorMessage?.includes('Credenciais inválidas!')) {
             return unauthorized();
          }
          return serverError(new Error(response.errorMessage));

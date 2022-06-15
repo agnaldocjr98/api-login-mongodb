@@ -2,6 +2,7 @@ import { DataBCrypt } from '@/data/interfaces/cryptography/bcrypt';
 import { DataFirebirdQueryData } from '@/data/interfaces/firebird';
 import {
    DataMongoAccomplishLoginPortal,
+   DataMongoLogLoginPortal,
    MongoAccomplishLoginPortalResult,
 } from '@/data/interfaces/login-portal';
 import { ParamsGetDataClient } from '@/data/usecases/login-portal/login-portal-utils';
@@ -13,6 +14,7 @@ import {
    mongoDisconnect,
    mongoGetCollection,
 } from '../mongo-helpers';
+import moment from 'moment';
 
 interface GetDataClient {
    DOC: string;
@@ -24,7 +26,8 @@ export class MongoAccomplishLoginPortal
 {
    constructor(
       private readonly bcrypt: DataBCrypt,
-      private readonly firebirdgetdata: DataFirebirdQueryData
+      private readonly firebirdgetdata: DataFirebirdQueryData,
+      private readonly log: DataMongoLogLoginPortal
    ) {}
 
    async accomplish(
@@ -40,7 +43,6 @@ export class MongoAccomplishLoginPortal
          const response = await collection.findOne({
             userkey: params.userkey,
          });
-
          mongoDisconnect(client);
          if (response) {
             const isMatch = await this.bcrypt.compare(
@@ -50,17 +52,18 @@ export class MongoAccomplishLoginPortal
 
             if (isMatch) {
                const uidmongo = response._id.toString();
-               const params = ParamsGetDataClient(uidmongo);
+               const fbparams = ParamsGetDataClient(uidmongo);
 
                const firebird: FirebirdQueryDataModel<GetDataClient> =
-                  await this.firebirdgetdata.query(params);
+                  await this.firebirdgetdata.query(fbparams);
                if (!firebird.sucesso || firebird.recuperado === 0)
-                  return {
-                     isAuthenticated: false,
-                     errorMessage:
-                        'As credenciais foram validadas porém houve um problema ao buscar os dados do cliente!',
-                  };
+                  throw 'As credenciais foram validadas porém houve um problema ao buscar os dados do cliente!';
 
+               await this.log.create({
+                  ...params.logdata,
+                  datetime: moment().format('yyyy-mm-ddTHH:mm:ss'),
+                  success: true,
+               });
                return {
                   isAuthenticated: true,
                   clientData: {
@@ -68,20 +71,18 @@ export class MongoAccomplishLoginPortal
                      name: firebird.dados[0].NAME,
                   },
                };
-            }
-            return {
-               isAuthenticated: false,
-               errorMessage: 'Credenciais inválidas!',
-            };
+            } else throw 'Credenciais inválidas!';
          }
-         return {
-            isAuthenticated: false,
-            errorMessage: 'Credenciais inválidas!',
-         };
+         throw 'Credenciais inválidas!';
       } catch (error: any) {
+         await this.log.create({
+            ...params.logdata,
+            datetime: moment().format('yyyy-mm-ddTHH:mm:ss'),
+            success: false,
+         });
          return {
             isAuthenticated: false,
-            errorMessage: `Mongo failed to connect: ${error.message}`,
+            errorMessage: typeof error === 'string' ? error : error.message,
          };
       }
    }
